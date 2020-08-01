@@ -1,6 +1,6 @@
 # Continuous Control Using Deep Reinforcement Learning
 
-Implementation of REINFORCE algorithm to train an agent.
+Implementation of DDGP algorithm to train an agent.
 
 ### Project Details
 
@@ -11,3 +11,4 @@ Implementation of REINFORCE algorithm to train an agent.
 ### Getting Started
 
 ### Instructions
+
