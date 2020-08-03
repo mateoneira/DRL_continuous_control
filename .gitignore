@@ -1,0 +1,4 @@
+.ipynb_checkpoints/
+__pycache__/
+Reacher_Windows_x86_64/
+unity-environment.log
