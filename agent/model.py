@@ -83,8 +83,8 @@ class Critic(nn.Module):
 		super(Critic, self).__init__()
 		self.seed = torch.manual_seed(seed)
 		self.fc1 = nn.Linear(state_size, fc_units)
-		self.fc2 = nn.Linear(fc_units + action_size, fc_units/2)
-		self.fc3 = nn.Linear(fc_units/2, 1)
+		self.fc2 = nn.Linear(fc_units + action_size, int(fc_units/2))
+		self.fc3 = nn.Linear(int(fc_units/2), 1)
 		self.reset_parameters()
 
 	def reset_parameters(self):
