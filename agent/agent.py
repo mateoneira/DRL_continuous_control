@@ -30,8 +30,8 @@ WEIGHT_DECAY = 1e-2    # L2 weight decay
 NOISE_THETA = 0.15		# Ornstein-Ulenbeck parameter
 NOISE_SIGMA = 0.2		# Ornstein-Ulenbeck parameter
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 class Agent():
 	"""
@@ -169,14 +169,20 @@ class Agent():
 			target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
 
 class OUNoise:
-	"""Ornstein-Uhlenbeck process."""
+	"""
+	Ornstein-Uhlenbeck process.
 
-	def __init__(self, size, seed, mu=0., theta=NOISE_THETA, sigma=NOISE_SIGMA):
+	adapted using https://math.stackexchange.com/questions/1287634/implementing-ornstein-uhlenbeck-in-matlab
+
+	"""
+
+	def __init__(self, size, seed, mu=0., theta=NOISE_THETA, sigma=NOISE_SIGMA, dx = 1e-2):
 		"""Initialize parameters and noise process."""
 		self.mu = mu * np.ones(size)
 		self.theta = theta
 		self.sigma = sigma
 		self.seed = random.seed(seed)
+		self.dx = dx
 		self.reset()
 
 	def reset(self):
@@ -186,7 +192,8 @@ class OUNoise:
 	def sample(self):
 		"""Update internal state and return it as a noise sample."""
 		x = self.state
-		dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+		# dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+		dx = self.theta * (self.mu - x)*self.dx + self.sigma * np.sqrt(self.dx)*np.random.normal(size=self.mu.shape)
 		self.state = x + dx
 		return self.state
 
