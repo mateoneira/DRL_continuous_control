@@ -24,7 +24,7 @@ class Actor(nn.Module):
 	Maps state to specific actions
 	"""
 
-	def __init__(self, state_size, action_size, seed, fc_units=256):
+	def __init__(self, state_size, action_size, seed, fc_units=128):
 		"""
 		Initialize parameters and build model. 
 
@@ -42,17 +42,24 @@ class Actor(nn.Module):
 
 		super(Actor, self).__init__()
 		self.seed = torch.manual_seed(seed)
+		self.bn = nn.BatchNorm1d(state_size)
 		self.fc1 = nn.Linear(state_size, fc_units)
-		self.fc2 = nn.Linear(fc_units, action_size)
+		self.bn1 = nn.BatchNorm1d(fc_units)
+		self.fc2 = nn.Linear(fc_units, fc_units)
+		self.bn2 = nn.BatchNorm1d(fc_units)
+		self.fc3 = nn.Linear(fc_units, action_size)
 		self.reset_parameters()
 
 	def reset_parameters(self):
 		self.fc1.weight.data.uniform_(*hidden_unit(self.fc1))
-		self.fc2.weight.data.uniform_(-3e-3, 3e-3)
+		self.fc2.weight.data.uniform_(*hidden_unit(self.fc2))
+		self.fc3.weight.data.uniform_(-3e-3, 3e-3)
 
 	def forward(self, state):
-		x = F.relu(self.fc1(state))
-		return torch.tanh(self.fc2(x))
+		x = self.bn(state)
+		x = F.relu(self.bn1(self.fc1(x)))
+		x = F.relu(self.bn2(self.fc2(x)))
+		return torch.tanh(self.fc3(x))
 
 class Critic(nn.Module):
 	"""
@@ -62,7 +69,7 @@ class Critic(nn.Module):
 	actions are note included until the second layer, as per original paper
 	"""
 
-	def __init__(self, state_size, action_size, seed, fc_units=256):
+	def __init__(self, state_size, action_size, seed, fc_units=128):
 		"""
 		Initialize parameters and build model
 
@@ -82,9 +89,10 @@ class Critic(nn.Module):
 
 		super(Critic, self).__init__()
 		self.seed = torch.manual_seed(seed)
+		self.bn = nn.BatchNorm1d(state_size)
 		self.fc1 = nn.Linear(state_size, fc_units)
-		self.fc2 = nn.Linear(fc_units + action_size, int(fc_units/2))
-		self.fc3 = nn.Linear(int(fc_units/2), 1)
+		self.fc2 = nn.Linear(fc_units + action_size, fc_units)
+		self.fc3 = nn.Linear(fc_units, 1)
 		self.reset_parameters()
 
 	def reset_parameters(self):
@@ -93,7 +101,7 @@ class Critic(nn.Module):
 		self.fc3.weight.data.uniform_(-3e3,3e3)
 
 	def forward(self, state, action):
-		x_state = F.relu(self.fc1(state))
+		x_state = F.relu(self.fc1(self.bn(state)))
 		x = torch.cat((x_state, action), dim=1)
 		x = F.relu(self.fc2(x))
 		# x = F.relu(self.fc3(x))

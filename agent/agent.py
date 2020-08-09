@@ -2,16 +2,22 @@
 
 # requirements:
 # 	Ornstein-Uhlenbeck process noise class
-#	Replay buffer class 
-#	Actor-Critic networks (local and target for both) - with batch norm
-#	Soft update theta_prime = tau * theta + (1-tau)*prime_theta
+#		Replay buffer class 
+#		Actor-Critic networks (local and target for both) - with batch norm
+#		Soft update theta_prime = tau * theta + (1-tau)*prime_theta
+
+# notes:
+#		exploration exploitation is important, we can decrease the noise param slowly
+#		it's important to be aggresive in the exploration initially 
+#		so include an epsilon to decay the noise as training progresses
+#		To take advantage of multiple agents (20), we can have different noise processes for each
 
 import numpy as np 
 import random
 import copy
 from collections import namedtuple, deque
 
-from agent.model import Actor, Actor, Critic 
+from agent.model import Actor, Critic 
 
 import torch
 import torch.nn.functional as F 
@@ -20,15 +26,17 @@ import torch.optim as optim
 ## hyperparameters based on original paper
 
 BUFFER_SIZE = int(1e6)  # replay buffer size
-BATCH_SIZE = 128        # minibatch size
+BATCH_SIZE = 256        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
-LR_ACTOR = 1e-4        # learning rate of the actor 
-LR_CRITIC = 1e-3       # learning rate of the critic
-WEIGHT_DECAY = 1e-2    # L2 weight decay
+LR_ACTOR = 1e-3         # learning rate of the actor 
+LR_CRITIC = 1e-3        # learning rate of the critic
+WEIGHT_DECAY = 0        # L2 weight decay
 
-NOISE_THETA = 0.15		# Ornstein-Ulenbeck parameter
-NOISE_SIGMA = 0.2		# Ornstein-Ulenbeck parameter
+NOISE_THETA = 0.15		  # Ornstein-Ulenbeck parameter
+NOISE_SIGMA = 0.05		  #Ornstein-Ulenbeck parameter
+EPSILON_DECAY = 1e-6    #to decay noise
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
@@ -80,22 +88,24 @@ class Agent():
  
  		# Noise process
 		self.noise = OUNoise(action_size, seed)
+		self.epsilon = 1.0
 
 		# Replay memory
 		self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random)
 		print('agent using {} device'.format(device))
 
-	def step(self, state, action, reward, next_state, done):
+	def step(self, states, actions, rewards, next_states, dones):
 		"""
 		Save experience in replay memory, and use random sample from buffer to learn.
 		"""
 		# add to replay buffer
-		self.memory.add(state, action, reward, next_state, done)
+		for state, action, reward, next_state, done in zip(states, actions, rewards, next_states, dones):
+			self.memory.add(state, action, reward, next_state, done)
 
 		# learn, if enough samples are available in memory
 		if len(self.memory) > BATCH_SIZE:
-		    experiences = self.memory.sample()
-		    self.learn(experiences, GAMMA)
+			experiences = self.memory.sample()
+			self.learn(experiences, GAMMA)
 
 	def act(self, state, add_noise=True):
 		"""
@@ -106,8 +116,10 @@ class Agent():
 		with torch.no_grad():
 		    action = self.actor_local(state).cpu().data.numpy()
 		self.actor_local.train()
+
 		if add_noise:
-		    action += self.noise.sample()
+		    action += self.noise.sample()*self.epsilon
+
 		return np.clip(action, -1, 1)
 
 	def reset(self):
@@ -137,9 +149,12 @@ class Agent():
 		# Compute critic loss
 		Q_expected = self.critic_local(states, actions)
 		critic_loss = F.mse_loss(Q_expected, Q_targets)
+
 		# Minimize the loss
 		self.critic_optimizer.zero_grad()
 		critic_loss.backward()
+		# Gradient clipping to help with learning
+		torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(),1)
 		self.critic_optimizer.step()
 
 		# Compute actor loss
@@ -153,6 +168,9 @@ class Agent():
 		# update targets
 		self.soft_update(self.critic_local, self.critic_target, TAU)
 		self.soft_update(self.actor_local, self.actor_target, TAU)
+
+		self.epsilon -= EPSILON_DECAY 
+		self.epsilon = max(0.05,self.epsilon)
 
 	def soft_update(self, local_model, target_model, tau):
 		"""
