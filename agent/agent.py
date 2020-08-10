@@ -29,12 +29,12 @@ BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 256        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
-LR_ACTOR = 1e-3         # learning rate of the actor 
+LR_ACTOR = 1e-4         # learning rate of the actor 
 LR_CRITIC = 1e-3        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
 
 NOISE_THETA = 0.15		  # Ornstein-Ulenbeck parameter
-NOISE_SIGMA = 0.05		  #Ornstein-Ulenbeck parameter
+NOISE_SIGMA = 0.2		  #Ornstein-Ulenbeck parameter
 EPSILON_DECAY = 1e-6    #to decay noise
 
 
@@ -61,7 +61,7 @@ class Agent():
 				update target networks based on soft-update rule
 	"""
 
-	def __init__(self, state_size, action_size, seed):
+	def __init__(self, state_size, action_size, num_agents=1, seed=42):
 		"""
 		Initialize an agent
 
@@ -87,7 +87,7 @@ class Agent():
 		self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
  
  		# Noise process
-		self.noise = OUNoise(action_size, seed)
+		self.noise = [OUNoise(action_size, seed) for i in range(num_agents)]
 		self.epsilon = 1.0
 
 		# Replay memory
@@ -104,8 +104,9 @@ class Agent():
 
 		# learn, if enough samples are available in memory
 		if len(self.memory) > BATCH_SIZE:
-			experiences = self.memory.sample()
-			self.learn(experiences, GAMMA)
+			for _ in range(10):
+				experiences = self.memory.sample()
+				self.learn(experiences, GAMMA)
 
 	def act(self, state, add_noise=True):
 		"""
@@ -118,12 +119,13 @@ class Agent():
 		self.actor_local.train()
 
 		if add_noise:
-		    action += self.noise.sample()*self.epsilon
+		    action += np.array([n.sample() for n  in self.noise])*self.epsilon
 
 		return np.clip(action, -1, 1)
 
 	def reset(self):
-		self.noise.reset()
+		for n in self.noise:
+			n.reset()
 
 	def learn(self, experiences, gamma):
 		"""
