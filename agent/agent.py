@@ -34,7 +34,7 @@ LR_CRITIC = 1e-3        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
 
 NOISE_THETA = 0.15		# Ornstein-Ulenbeck parameter
-NOISE_SIGMA = 0.05		#Ornstein-Ulenbeck parameter
+NOISE_SIGMA = 0.1		#Ornstein-Ulenbeck parameter
 EPSILON_DECAY = 1e-6    #to decay noise
 
 
