@@ -101,10 +101,10 @@ class Critic(nn.Module):
 		self.fc3.weight.data.uniform_(-3e3,3e3)
 
 	def forward(self, state, action):
-		x_state = F.relu(self.fc1(self.bn(state)))
+		state_bn = self.bn(state)
+		x_state = F.relu(self.fc1(state_bn))
 		x = torch.cat((x_state, action), dim=1)
 		x = F.relu(self.fc2(x))
-		# x = F.relu(self.fc3(x))
 		return self.fc3(x)
 	
 
