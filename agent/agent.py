@@ -33,8 +33,8 @@ LR_ACTOR = 1e-4         # learning rate of the actor
 LR_CRITIC = 1e-3        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
 
-NOISE_THETA = 0.15		  # Ornstein-Ulenbeck parameter
-NOISE_SIGMA = 0.2		  #Ornstein-Ulenbeck parameter
+NOISE_THETA = 0.15		# Ornstein-Ulenbeck parameter
+NOISE_SIGMA = 0.05		#Ornstein-Ulenbeck parameter
 EPSILON_DECAY = 1e-6    #to decay noise
 
 
@@ -89,6 +89,7 @@ class Agent():
  		# Noise process
 		self.noise = [OUNoise(action_size, seed) for i in range(num_agents)]
 		self.epsilon = 1.0
+		self.t_step = 0
 
 		# Replay memory
 		self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random)
@@ -102,11 +103,12 @@ class Agent():
 		for state, action, reward, next_state, done in zip(states, actions, rewards, next_states, dones):
 			self.memory.add(state, action, reward, next_state, done)
 
+		self.t_step+=1
 		# learn, if enough samples are available in memory
-		if len(self.memory) > BATCH_SIZE:
-			for _ in range(10):
-				experiences = self.memory.sample()
-				self.learn(experiences, GAMMA)
+		if len(self.memory) > BATCH_SIZE and self.t_step % 20 == 0:
+				for _ in range(10):
+					experiences = self.memory.sample()
+					self.learn(experiences, GAMMA)
 
 	def act(self, state, add_noise=True):
 		"""
