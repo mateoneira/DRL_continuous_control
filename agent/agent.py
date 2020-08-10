@@ -42,7 +42,6 @@ NUM_UPDATES = 10
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# device = torch.device("cpu")
 
 class Agent():
 	"""
@@ -109,9 +108,9 @@ class Agent():
 		self.t_step+=1
 		# learn, if enough samples are available in memory
 		if len(self.memory) > BATCH_SIZE and self.t_step % UPDATE_FREQ == 0:
-				for _ in range(NUM_UPDATES):
-					experiences = self.memory.sample()
-					self.learn(experiences, GAMMA)
+			for _ in range(NUM_UPDATES):
+				experiences = self.memory.sample()
+				self.learn(experiences, GAMMA)
 
 	def act(self, state, add_noise=True):
 		"""
@@ -150,6 +149,7 @@ class Agent():
 		# Get predicted next-state actions and Q values from target models
 		actions_next = self.actor_target(next_states)
 		Q_targets_next = self.critic_target(next_states, actions_next)
+		
 		# Compute Q targets for current states (y_i)
 		Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
@@ -160,6 +160,7 @@ class Agent():
 		# Minimize the loss
 		self.critic_optimizer.zero_grad()
 		critic_loss.backward()
+
 		# Gradient clipping to help with learning
 		torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(),1)
 		self.critic_optimizer.step()
